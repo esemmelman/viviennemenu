@@ -385,10 +385,10 @@
       </div>
 
       <article id="torah-panel" class="torah-panel" aria-labelledby="torah-title" hidden>
-        <h1 id="torah-title">Miketz</h1>
+        <h1 id="torah-title">Eikev</h1>
         <p class="torah-reference">
-          Genesis 41:1–44:17 ·
-          <a href="https://www.sefaria.org/Genesis.41?lang=en" target="_blank" rel="noopener">Revised JPS, 2023 via Sefaria</a>
+          Deuteronomy 7:12–11:25 ·
+          <a href="https://www.sefaria.org/Deuteronomy.7.12-11.25?lang=en" target="_blank" rel="noopener">Revised JPS, 2023 via Sefaria</a>
           · CC BY-NC
         </p>
         <div id="torah-text" aria-live="polite">
@@ -554,10 +554,10 @@
 
       torahText.innerHTML = '<p class="torah-status">Loading Torah portion…</p>';
       try {
-        const chapterNumbers = [41, 42, 43, 44];
+        const chapterNumbers = [7, 8, 9, 10, 11];
         const jpsVersion = encodeURIComponent("english|THE JPS TANAKH: Gender-Sensitive Edition");
         const responses = await Promise.all(chapterNumbers.map((chapter) =>
-          fetch(`https://www.sefaria.org/api/v3/texts/Genesis%20${chapter}?version=${jpsVersion}&return_format=text_only`)
+          fetch(`https://www.sefaria.org/api/v3/texts/Deuteronomy%20${chapter}?version=${jpsVersion}&return_format=text_only`)
         ));
         if (responses.some((response) => !response.ok)) throw new Error("Unable to load one or more chapters");
 
@@ -566,20 +566,21 @@
         chapters.forEach((chapterData) => {
           const chapterNumber = Number(chapterData.sections[0]);
           const verses = chapterData.versions[0]?.text;
-          if (!Array.isArray(verses)) throw new Error(`Revised JPS text unavailable for Genesis ${chapterNumber}`);
+          if (!Array.isArray(verses)) throw new Error(`Revised JPS text unavailable for Deuteronomy ${chapterNumber}`);
 
           const heading = document.createElement("h2");
           heading.className = "torah-chapter";
-          heading.textContent = `Genesis ${chapterNumber}`;
+          heading.textContent = `Deuteronomy ${chapterNumber}`;
           torahText.append(heading);
 
           verses
             .map((text, index) => ({ verse: index + 1, text }))
-            .filter((verse) => chapterNumber !== 44 || verse.verse <= 17)
+            .filter((verse) => (chapterNumber !== 7 || verse.verse >= 12) && (chapterNumber !== 11 || verse.verse <= 25))
             .forEach((verse) => {
               const paragraph = document.createElement("p");
               paragraph.className = "torah-verse";
-              if (chapterNumber === 42 && verse.verse >= 8 && verse.verse <= 23) {
+              if ((chapterNumber === 8 && verse.verse >= 11 && verse.verse <= 20) ||
+                  (chapterNumber === 9 && verse.verse >= 1 && verse.verse <= 10)) {
                 paragraph.classList.add("highlighted");
               }
 
