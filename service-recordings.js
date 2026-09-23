@@ -26,7 +26,7 @@
       headers: headers(item.id, { Prefer: 'resolution=merge-duplicates' }),
       body: JSON.stringify({
         id: item.id,
-        name: 'Brady',
+        name: 'Vivienne',
         start_time: item.start,
         passage_key_text: item.title,
         mime_type: item.blob.type.split(';')[0],
