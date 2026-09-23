@@ -650,6 +650,7 @@
       }
 
       selectedPageIndex = pageList.selectedIndex;
+      window.stopServiceRecording?.();
       const isServiceBeta = selected.value === "service-beta";
       const isService = selected.text === "Service" || isServiceBeta;
       const isHomework = selected.value === "homework";
@@ -682,6 +683,6 @@
       }
     });
   </script>
-  <script src="service-recordings.js?v=1.16"></script>
+  <script src="service-recordings.js?v=1.17"></script>
 </body>
 </html>

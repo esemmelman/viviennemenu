@@ -6,6 +6,7 @@
   let timer;
   let silenceCheck;
   let audioContext;
+  let pending = null;
 
   function headers(id, extra = {}) {
     return { ...supabaseHeaders, 'x-recording-id': id, ...extra };
@@ -21,9 +22,9 @@
   }
 
   async function save(item) {
-    const response = await fetch(`${endpoint}?on_conflict=id`, {
+    const response = await fetch(`${endpoint}?on_conflict=id&select=id`, {
       method: 'POST',
-      headers: headers(item.id, { Prefer: 'resolution=merge-duplicates' }),
+      headers: headers(item.id, { Prefer: 'resolution=merge-duplicates,return=representation' }),
       body: JSON.stringify({
         id: item.id,
         name: 'Vivienne',
@@ -34,6 +35,8 @@
       })
     });
     if (!response.ok) throw new Error(`Save failed (${response.status})`);
+    const [saved] = await response.json();
+    if (saved?.id !== item.id) throw new Error('Save was not confirmed');
   }
 
   async function saveWithRetry(item) {
@@ -41,6 +44,23 @@
       await save(item);
     } catch {
       await save(item);
+    }
+  }
+
+  async function savePending() {
+    busy = true;
+    button.disabled = true;
+    button.textContent = 'Saving…';
+    try {
+      await saveWithRetry(pending);
+      pending = null;
+      button.textContent = 'Record';
+    } catch (error) {
+      console.error(error);
+      button.textContent = 'Retry save';
+    } finally {
+      busy = false;
+      button.disabled = false;
     }
   }
 
@@ -57,6 +77,7 @@
   button.onclick = async () => {
     if (recorder?.state === 'recording') { stop(); return; }
     if (busy) return;
+    if (pending) { await savePending(); return; }
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
       return;
     }
@@ -94,11 +115,10 @@
         button.textContent = 'Record';
         button.setAttribute('aria-pressed', 'false');
         item.blob = new Blob(chunks, { type: capture.mimeType || type || 'audio/webm' });
-        try {
-          if (item.blob.size) await saveWithRetry(item);
-        } catch (error) {
-          console.error(error);
-        } finally {
+        if (item.blob.size) {
+          pending = item;
+          await savePending();
+        } else {
           busy = false;
           button.disabled = false;
         }
@@ -131,7 +151,7 @@
   };
 
   window.addEventListener('beforeunload', event => {
-    if (recorder || busy) {
+    if (recorder || busy || pending) {
       event.preventDefault();
       event.returnValue = '';
     }

@@ -1,6 +1,6 @@
 create table public.bradymenu_service_recordings_v1 (
   id uuid primary key,
-  name text not null default 'Brady' check (name = 'Brady'),
+  name text not null default 'Brady' check (name in ('Brady', 'Aria', 'Vivienne')),
   start_time timestamptz not null,
   passage_key_text text not null check (char_length(passage_key_text) between 1 and 120),
   mime_type text not null check (mime_type in ('audio/webm', 'audio/ogg', 'audio/mp4')),
