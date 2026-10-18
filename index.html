@@ -634,7 +634,7 @@
         pageFrame.src = serviceUrl(slide.id);
       }
       window.servicePassageTitle = slide.title;
-      window.showServicePlayback?.(isServiceBeta && slide.id === 'p');
+      window.showServicePlayback?.(isServiceBeta ? slide.id : null);
       pageFrame.title = slide.title
         ? `Service — ${slide.title}`
         : slide.page
@@ -699,6 +699,6 @@
       }
     });
   </script>
-  <script src="service-recordings.js?v=1.18"></script>
+  <script src="service-recordings.js?v=1.19"></script>
 </body>
 </html>

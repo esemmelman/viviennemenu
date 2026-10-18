@@ -4,7 +4,14 @@
   const playButton = document.querySelector('#service-play-button');
   const playbackPanel = document.querySelector('#service-playback');
   const status = document.querySelector('#service-playback-status');
-  const exampleId = '93f616e9-04a7-4954-a7d4-4177da657bcb';
+  const exampleIds = {
+    p: '93f616e9-04a7-4954-a7d4-4177da657bcb',
+    g3eb74f277b9_0_9: '91b7e099-502a-49b1-8ddf-d70e45253b72',
+    g3eb74f277b9_0_22: 'a8ef17bc-8fc6-473a-bcee-baf673d0a615',
+    g3eb74f277b9_0_32: '0c06585c-66aa-467c-9c71-26bfc4f26085',
+    g3eb74f277b9_0_61: '07b597b3-553d-4075-bf32-2e585b01d29d'
+  };
+  let exampleId = null;
   const audio = new Audio();
   let button = practiceButton;
   let exampleAvailable = false;
@@ -32,6 +39,9 @@
 
   async function loadExample() {
     const version = ++loadVersion;
+    exampleAvailable = false;
+    audio.removeAttribute('src');
+    updateControls();
     status.textContent = 'Loading example…';
     try {
       const response = await fetch(`${endpoint}?id=eq.${exampleId}&select=mime_type,audio_base64`, { headers: headers(exampleId) });
@@ -44,15 +54,16 @@
     } catch (error) {
       if (version !== loadVersion) return;
       console.error(error);
-      status.textContent = 'Could not load the example. Reopen Tallit to retry.';
+      status.textContent = 'Could not load the example. Reopen this passage to retry.';
     }
     updateControls();
   }
 
-  window.showServicePlayback = visible => {
-    playbackPanel.hidden = !visible;
+  window.showServicePlayback = slideId => {
+    exampleId = exampleIds[slideId] || null;
+    playbackPanel.hidden = !exampleId;
     resetPlayback();
-    if (visible) loadExample();
+    if (exampleId) loadExample();
     else ++loadVersion;
   };
   playButton.onclick = async () => {
@@ -112,7 +123,7 @@
     button.textContent = 'Saving…';
     try {
       await saveWithRetry(pending);
-      if (pending.example) {
+      if (pending.example && pending.id === exampleId) {
         ++loadVersion;
         audio.src = `data:${pending.blob.type};base64,${await asBase64(pending.blob)}`;
         exampleAvailable = true;
@@ -157,6 +168,8 @@
     button.disabled = true;
     button.textContent = 'Stop Recording';
     button.setAttribute('aria-pressed', 'true');
+    const example = button === exampleButton;
+    const item = { id: example ? exampleId : crypto.randomUUID(), title: example ? `${window.servicePassageTitle} — playback example` : window.servicePassageTitle, start: new Date().toISOString(), example };
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -174,8 +187,6 @@
         .find(value => MediaRecorder.isTypeSupported(value));
       const capture = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
       const chunks = [];
-      const example = button === exampleButton;
-      const item = { id: example ? exampleId : crypto.randomUUID(), title: example ? 'Tallit — playback example' : window.servicePassageTitle, start: new Date().toISOString(), example };
       capture.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
       capture.onstop = async () => {
         clearTimeout(timer);
