@@ -165,7 +165,7 @@
     button.disabled = true;
     button.textContent = 'Stop Recording';
     button.setAttribute('aria-pressed', 'true');
-    const item = { id: example ? exampleId : crypto.randomUUID(), title: example ? `${window.servicePassageTitle} — playback example` : window.servicePassageTitle, start: new Date().toISOString(), example };
+    const item = { id: crypto.randomUUID(), title: window.servicePassageTitle, start: new Date().toISOString() };
     let stream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
