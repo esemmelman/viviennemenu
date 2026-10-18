@@ -1,5 +1,14 @@
 (() => {
-  const button = document.querySelector('#service-record-button');
+  const practiceButton = document.querySelector('#service-record-button');
+  const exampleButton = document.querySelector('#service-example-button');
+  const playButton = document.querySelector('#service-play-button');
+  const playbackPanel = document.querySelector('#service-playback');
+  const status = document.querySelector('#service-playback-status');
+  const exampleId = '93f616e9-04a7-4954-a7d4-4177da657bcb';
+  const audio = new Audio();
+  let button = practiceButton;
+  let exampleAvailable = false;
+  let loadVersion = 0;
   const endpoint = `${supabaseUrl}/rest/v1/bradymenu_service_recordings_v1`;
   let recorder = null;
   let busy = false;
@@ -7,6 +16,56 @@
   let silenceCheck;
   let audioContext;
   let pending = null;
+
+  function resetPlayback() {
+    audio.pause();
+    audio.currentTime = 0;
+    playButton.textContent = 'Play';
+  }
+
+  function updateControls() {
+    const active = busy || !!recorder || !!pending;
+    practiceButton.disabled = active && button !== practiceButton;
+    exampleButton.disabled = active && button !== exampleButton;
+    playButton.disabled = active || !exampleAvailable;
+  }
+
+  async function loadExample() {
+    const version = ++loadVersion;
+    status.textContent = 'Loading example…';
+    try {
+      const response = await fetch(`${endpoint}?id=eq.${exampleId}&select=mime_type,audio_base64`, { headers: headers(exampleId) });
+      if (!response.ok) throw new Error(`Load failed (${response.status})`);
+      const [item] = await response.json();
+      if (version !== loadVersion) return;
+      exampleAvailable = !!item;
+      if (item) audio.src = `data:${item.mime_type};base64,${item.audio_base64}`;
+      status.textContent = item ? '' : 'Record an example to enable Play.';
+    } catch (error) {
+      if (version !== loadVersion) return;
+      console.error(error);
+      status.textContent = 'Could not load the example. Reopen Tallit to retry.';
+    }
+    updateControls();
+  }
+
+  window.showServicePlayback = visible => {
+    playbackPanel.hidden = !visible;
+    resetPlayback();
+    if (visible) loadExample();
+    else ++loadVersion;
+  };
+  playButton.onclick = async () => {
+    if (!audio.paused) { resetPlayback(); return; }
+    try {
+      await audio.play();
+      playButton.textContent = 'Stop';
+    } catch (error) {
+      console.error(error);
+      status.textContent = 'Playback failed. Press Play to retry.';
+    }
+  };
+  audio.onended = resetPlayback;
 
   function headers(id, extra = {}) {
     return { ...supabaseHeaders, 'x-recording-id': id, ...extra };
@@ -53,14 +112,21 @@
     button.textContent = 'Saving…';
     try {
       await saveWithRetry(pending);
+      if (pending.example) {
+        ++loadVersion;
+        audio.src = `data:${pending.blob.type};base64,${await asBase64(pending.blob)}`;
+        exampleAvailable = true;
+        status.textContent = 'Example saved.';
+      }
       pending = null;
-      button.textContent = 'Record';
+      button.textContent = button === exampleButton ? 'Record example' : 'Record';
     } catch (error) {
       console.error(error);
       button.textContent = 'Retry save';
     } finally {
       busy = false;
       button.disabled = false;
+      updateControls();
     }
   }
 
@@ -72,16 +138,22 @@
       clearInterval(silenceCheck);
     }
   }
-  window.stopServiceRecording = stop;
+  window.stopServiceRecording = () => { stop(); resetPlayback(); };
 
-  button.onclick = async () => {
+  async function startRecording(target) {
+    if (target !== button && (recorder || busy || pending)) return;
+    button = target;
     if (recorder?.state === 'recording') { stop(); return; }
     if (busy) return;
     if (pending) { await savePending(); return; }
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      status.textContent = 'Audio recording is unavailable in this browser.';
       return;
     }
     busy = true;
+    resetPlayback();
+    ++loadVersion;
+    updateControls();
     button.disabled = true;
     button.textContent = 'Stop Recording';
     button.setAttribute('aria-pressed', 'true');
@@ -102,7 +174,8 @@
         .find(value => MediaRecorder.isTypeSupported(value));
       const capture = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
       const chunks = [];
-      const item = { id: crypto.randomUUID(), title: window.servicePassageTitle, start: new Date().toISOString() };
+      const example = button === exampleButton;
+      const item = { id: example ? exampleId : crypto.randomUUID(), title: example ? 'Tallit — playback example' : window.servicePassageTitle, start: new Date().toISOString(), example };
       capture.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
       capture.onstop = async () => {
         clearTimeout(timer);
@@ -112,7 +185,7 @@
         stream.getTracks().forEach(track => track.stop());
         recorder = null;
         busy = true;
-        button.textContent = 'Record';
+        button.textContent = example ? 'Record example' : 'Record';
         button.setAttribute('aria-pressed', 'false');
         item.blob = new Blob(chunks, { type: capture.mimeType || type || 'audio/webm' });
         if (item.blob.size) {
@@ -121,6 +194,7 @@
         } else {
           busy = false;
           button.disabled = false;
+          updateControls();
         }
       };
       capture.onerror = stop;
@@ -145,10 +219,14 @@
       stream?.getTracks().forEach(track => track.stop());
       busy = false;
       button.disabled = false;
-      button.textContent = 'Record';
+      button.textContent = button === exampleButton ? 'Record example' : 'Record';
       button.setAttribute('aria-pressed', 'false');
+      status.textContent = 'Recording could not start. Check microphone permission and try again.';
+      updateControls();
     }
-  };
+  }
+  practiceButton.onclick = () => startRecording(practiceButton);
+  exampleButton.onclick = () => startRecording(exampleButton);
 
   window.addEventListener('beforeunload', event => {
     if (recorder || busy || pending) {
