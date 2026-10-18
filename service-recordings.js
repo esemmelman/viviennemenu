@@ -1,6 +1,5 @@
 (() => {
   const practiceButton = document.querySelector('#service-record-button');
-  const exampleButton = document.querySelector('#service-example-button');
   const playButton = document.querySelector('#service-play-button');
   const playbackPanel = document.querySelector('#service-playback');
   const status = document.querySelector('#service-playback-status');
@@ -21,7 +20,7 @@
   };
   let exampleId = null;
   const audio = new Audio();
-  let button = practiceButton;
+  const button = practiceButton;
   let exampleAvailable = false;
   let loadVersion = 0;
   const endpoint = `${supabaseUrl}/rest/v1/bradymenu_service_recordings_v1`;
@@ -40,8 +39,6 @@
 
   function updateControls() {
     const active = busy || !!recorder || !!pending;
-    practiceButton.disabled = active && button !== practiceButton;
-    exampleButton.disabled = active && button !== exampleButton;
     playButton.disabled = active || !exampleAvailable;
   }
 
@@ -58,7 +55,7 @@
       if (version !== loadVersion) return;
       exampleAvailable = !!item;
       if (item) audio.src = `data:${item.mime_type};base64,${item.audio_base64}`;
-      status.textContent = item ? '' : 'Record an example to enable Play.';
+      status.textContent = item ? '' : 'No example recording is available yet.';
     } catch (error) {
       if (version !== loadVersion) return;
       console.error(error);
@@ -131,14 +128,8 @@
     button.textContent = 'Saving…';
     try {
       await saveWithRetry(pending);
-      if (pending.example && pending.id === exampleId) {
-        ++loadVersion;
-        audio.src = `data:${pending.blob.type};base64,${await asBase64(pending.blob)}`;
-        exampleAvailable = true;
-        status.textContent = 'Example saved.';
-      }
       pending = null;
-      button.textContent = button === exampleButton ? 'Record example' : 'Record';
+      button.textContent = 'Record';
     } catch (error) {
       console.error(error);
       button.textContent = 'Retry save';
@@ -159,9 +150,7 @@
   }
   window.stopServiceRecording = () => { stop(); resetPlayback(); };
 
-  async function startRecording(target) {
-    if (target !== button && (recorder || busy || pending)) return;
-    button = target;
+  async function startRecording() {
     if (recorder?.state === 'recording') { stop(); return; }
     if (busy) return;
     if (pending) { await savePending(); return; }
@@ -176,7 +165,6 @@
     button.disabled = true;
     button.textContent = 'Stop Recording';
     button.setAttribute('aria-pressed', 'true');
-    const example = button === exampleButton;
     const item = { id: example ? exampleId : crypto.randomUUID(), title: example ? `${window.servicePassageTitle} — playback example` : window.servicePassageTitle, start: new Date().toISOString(), example };
     let stream;
     try {
@@ -204,7 +192,7 @@
         stream.getTracks().forEach(track => track.stop());
         recorder = null;
         busy = true;
-        button.textContent = example ? 'Record example' : 'Record';
+        button.textContent = 'Record';
         button.setAttribute('aria-pressed', 'false');
         item.blob = new Blob(chunks, { type: capture.mimeType || type || 'audio/webm' });
         if (item.blob.size) {
@@ -238,14 +226,13 @@
       stream?.getTracks().forEach(track => track.stop());
       busy = false;
       button.disabled = false;
-      button.textContent = button === exampleButton ? 'Record example' : 'Record';
+      button.textContent = 'Record';
       button.setAttribute('aria-pressed', 'false');
       status.textContent = 'Recording could not start. Check microphone permission and try again.';
       updateControls();
     }
   }
-  practiceButton.onclick = () => startRecording(practiceButton);
-  exampleButton.onclick = () => startRecording(exampleButton);
+  practiceButton.onclick = startRecording;
 
   window.addEventListener('beforeunload', event => {
     if (recorder || busy || pending) {

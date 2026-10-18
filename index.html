@@ -171,7 +171,7 @@
       flex: 0 0 22%;
       display: grid;
       place-items: start center;
-      padding-top: 15px;
+      padding-top: 35px;
       min-width: 0;
     }
     .service-beta-image {
@@ -187,7 +187,7 @@
       flex: 1;
       place-items: start center;
       min-width: 0;
-      padding-top: 15px;
+      padding-top: 35px;
     }
 
     .homework-panel {
@@ -216,7 +216,7 @@
     .service-playback { max-width: 100%; text-align: center; }
     .service-playback[hidden] { display: none; }
     .service-playback button { display: block; margin: 0 auto 8px; padding: 7px; cursor: pointer; }
-    .service-playback p { color: white; font-size: 0.8rem; overflow-wrap: anywhere; }
+    .service-playback p { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
     .torah-panel {
       width: min(100%, 900px);
@@ -392,7 +392,6 @@
         <div class="service-beta-rail">
           <div id="service-playback" class="service-playback" hidden>
             <button id="service-play-button" type="button" disabled>Play</button>
-            <button id="service-example-button" type="button" aria-pressed="false">Record example</button>
             <p id="service-playback-status" role="status"></p>
           </div>
         </div>
@@ -699,6 +698,6 @@
       }
     });
   </script>
-  <script src="service-recordings.js?v=1.20"></script>
+  <script src="service-recordings.js?v=1.21"></script>
 </body>
 </html>
