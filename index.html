@@ -215,7 +215,11 @@
     .service-recording button { padding: 7px 12px; cursor: pointer; }
     .service-playback { max-width: 100%; text-align: center; }
     .service-playback[hidden] { display: none; }
-    .service-playback button { display: block; margin: 0 auto 8px; padding: 7px; cursor: pointer; }
+    .service-playback button { padding: 7px 12px; cursor: pointer; }
+    .service-play-button-wrap { display: inline-block; padding: 5px; border-radius: 10px; background: #fff8c5; box-shadow: 0 4px 18px rgb(15 23 42 / 25%); }
+    .service-playback-bar { width: 100%; margin-top: 12px; padding: 0 8px; box-sizing: border-box; color: white; font-size: 0.8rem; }
+    .service-playback-bar[hidden] { display: none; }
+    .service-playback-bar input { display: block; width: 100%; margin: 0 0 5px; accent-color: #e5bd29; cursor: pointer; }
     .service-playback p { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
     .torah-panel {
@@ -391,7 +395,13 @@
         <img id="service-beta-image" class="service-beta-image" alt="">
         <div class="service-beta-rail">
           <div id="service-playback" class="service-playback" hidden>
-            <button id="service-play-button" type="button" disabled>Play</button>
+            <div class="service-play-button-wrap">
+              <button id="service-play-button" type="button" disabled>Play</button>
+            </div>
+            <div id="service-playback-bar" class="service-playback-bar" hidden>
+              <input id="service-playback-seek" type="range" min="0" max="0" value="0" step="0.1" aria-label="Recording position" disabled>
+              <span id="service-playback-time">0:00 / 0:00</span>
+            </div>
             <p id="service-playback-status" role="status"></p>
           </div>
         </div>
@@ -698,6 +708,6 @@
       }
     });
   </script>
-  <script src="service-recordings.js?v=1.22"></script>
+  <script src="service-recordings.js?v=1.23"></script>
 </body>
 </html>

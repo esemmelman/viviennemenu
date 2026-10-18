@@ -3,6 +3,10 @@
   const playButton = document.querySelector('#service-play-button');
   const playbackPanel = document.querySelector('#service-playback');
   const status = document.querySelector('#service-playback-status');
+  const playbackBar = document.querySelector('#service-playback-bar');
+  const seek = document.querySelector('#service-playback-seek');
+  const playbackTime = document.querySelector('#service-playback-time');
+  let discoveringDuration = false;
   const exampleIds = {
     p: '93f616e9-04a7-4954-a7d4-4177da657bcb',
     g3eb74f277b9_0_9: '91b7e099-502a-49b1-8ddf-d70e45253b72',
@@ -32,10 +36,50 @@
   let pending = null;
 
   function resetPlayback() {
+    discoveringDuration = false;
     audio.pause();
     audio.currentTime = 0;
     playButton.textContent = 'Play';
+    playbackBar.hidden = true;
+    updateProgress();
   }
+
+  function formatTime(value) {
+    const seconds = Number.isFinite(value) ? Math.floor(value) : 0;
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  }
+
+  function updateProgress() {
+    const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+    seek.max = duration;
+    seek.value = discoveringDuration ? 0 : audio.currentTime;
+    seek.disabled = duration <= 0;
+    playbackTime.textContent = `${formatTime(discoveringDuration ? 0 : audio.currentTime)} / ${formatTime(duration)}`;
+    seek.setAttribute('aria-valuetext', playbackTime.textContent);
+  }
+
+  seek.oninput = () => {
+    if (!seek.disabled) audio.currentTime = Number(seek.value);
+    updateProgress();
+  };
+  audio.onloadedmetadata = () => {
+    // MediaRecorder WebM files can omit duration; seeking to the end discovers it.
+    if (audio.duration === Infinity) {
+      discoveringDuration = true;
+      audio.currentTime = 1e101;
+    }
+    updateProgress();
+  };
+  audio.ontimeupdate = () => {
+    if (discoveringDuration && Number.isFinite(audio.duration)) {
+      discoveringDuration = false;
+      audio.currentTime = 0;
+    }
+    updateProgress();
+  };
+  audio.ondurationchange = updateProgress;
+  audio.onplay = () => { playbackBar.hidden = false; playButton.textContent = 'Pause'; };
+  audio.onpause = () => { playButton.textContent = 'Play'; };
 
   function updateControls() {
     const active = busy || !!recorder || !!pending;
@@ -72,10 +116,11 @@
     else ++loadVersion;
   };
   playButton.onclick = async () => {
-    if (!audio.paused) { resetPlayback(); return; }
+    if (!audio.paused) { audio.pause(); playButton.textContent = 'Play'; return; }
     try {
       await audio.play();
-      playButton.textContent = 'Stop';
+      playbackBar.hidden = false;
+      playButton.textContent = 'Pause';
     } catch (error) {
       console.error(error);
       status.textContent = 'Playback failed. Press Play to retry.';
